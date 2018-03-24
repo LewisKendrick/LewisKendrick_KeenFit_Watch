@@ -11,10 +11,12 @@ import WatchKit
 import Foundation
 import WatchConnectivity
 
+var workoutInfo = InfoClass()
+var wCount = 0
+
 class WorkoutInterfaceController: WKInterfaceController, WCSessionDelegate
 {
     
-    var workoutInfo = InfoClass()
     @IBOutlet var workoutTable: WKInterfaceTable!
     
     override func didDeactivate() {
@@ -34,7 +36,7 @@ class WorkoutInterfaceController: WKInterfaceController, WCSessionDelegate
             }
             else
             {
-                selectedRow.rowGroup.setBackgroundColor(UIColor.green)
+                selectedRow.rowGroup.setBackgroundColor(UIColor.purple)
                 selectedRow.rowDetail.setText("Todo")
                 workoutInfo.finshedWorkout(didFinish: false, atIndex: rowIndex)
             }
@@ -50,22 +52,47 @@ class WorkoutInterfaceController: WKInterfaceController, WCSessionDelegate
         
     }
     
-    func session(_ session: WCSession, didReceiveMessage message: [String : Any], replyHandler: @escaping ([String : Any]) -> Void)
+    func session(_ session: WCSession, didReceiveMessage message: [String : Any] )
     {
         //unserilaze and decode any data we have
-        var replyValues = Dictionary<String, AnyObject>()
+       // var replyValues = Dictionary<String, AnyObject>()
         
         let loadedData = message["workoutData"]
         
         let loadedWorkout = NSKeyedUnarchiver.unarchiveObject(with: loadedData as! Data) as? InfoClass
         
         workoutInfo = loadedWorkout!
-        
         //letting the iphone know we got the data so it wont send again
-        replyValues["status"] = "Program Recieved" as AnyObject?
-        replyHandler(replyValues)
+       // replyValues["status"] = "Program Recieved" as AnyObject?
+       // replyHandler(replyValues)
+        
+        start()
     }
     
+    func start()
+    {
+        wCount = workoutInfo.waterCount!
+        
+        self.workoutTable .setNumberOfRows(workoutInfo.workoutStringArray.count, withRowType: "workoutRow")
+        for (index, workout) in workoutInfo.workoutStringArray.enumerated()
+        {
+            let row = self.workoutTable.rowController(at: index) as! WorkoutRowController
+            
+            row.rowTitle.setText(workout)
+            
+            if(workoutInfo.workoutBoolArray[index] == true)
+            {
+                row.rowGroup.setBackgroundColor(UIColor.gray)
+                row.rowDetail.setText("Done")
+            }
+            else
+            {
+                row.rowGroup.setBackgroundColor(UIColor.purple)
+                row.rowDetail.setText("Todo")
+            }
+            
+        }
+    }
     
     override func awake(withContext context: Any?)
     {
@@ -86,6 +113,16 @@ class WorkoutInterfaceController: WKInterfaceController, WCSessionDelegate
     
     override func willActivate()
     {
+        
+        // checking the session
+        if(WCSession.isSupported())
+        {
+            let session = WCSession.default
+            session.delegate = self
+            session.activate()
+        }
+        
+        
         // This method is called when watch view controller is about to be visible to user
         super.willActivate()
         
@@ -106,25 +143,30 @@ class WorkoutInterfaceController: WKInterfaceController, WCSessionDelegate
                     
                    let loadedWorkout = NSKeyedUnarchiver.unarchiveObject(with: loadedData as! Data) as? InfoClass
                             
-                   self.workoutInfo = loadedWorkout!
+                   workoutInfo = loadedWorkout!
             
             
-                   self.workoutTable.setNumberOfRows(self.workoutInfo.workoutStringArray.count, withRowType: "workoutRow")
-                            
-                            for (index, workout) in self.workoutInfo.workoutStringArray.enumerated()
+                   self.workoutTable.setNumberOfRows(workoutInfo.workoutStringArray.count, withRowType: "workoutRow")
+                    
+                    if(workoutInfo.waterCount != nil)
+                    {
+                    wCount = workoutInfo.waterCount!
+                    }
+                    
+                            for (index, workout) in workoutInfo.workoutStringArray.enumerated()
                             {
                                 let row = self.workoutTable.rowController(at: index) as! WorkoutRowController
                                 
                                 row.rowTitle.setText(workout)
                                 
-                                if(self.workoutInfo.workoutBoolArray[index] == true)
+                                if(workoutInfo.workoutBoolArray[index] == true)
                                 {
                                     row.rowGroup.setBackgroundColor(UIColor.gray)
                                     row.rowDetail.setText("Done")
                                 }
                                 else
                                 {
-                                    row.rowGroup.setBackgroundColor(UIColor.green)
+                                    row.rowGroup.setBackgroundColor(UIColor.purple)
                                     row.rowDetail.setText("Todo")
                                 }
                                 

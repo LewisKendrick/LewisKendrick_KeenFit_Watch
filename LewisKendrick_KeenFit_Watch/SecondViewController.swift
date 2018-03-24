@@ -11,35 +11,6 @@ import WatchConnectivity
 
 class SecondViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, WCSessionDelegate
 {
-    func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
-        //nothing
-    }
-    
-    func sessionDidBecomeInactive(_ session: WCSession) {
-        //nothing
-    }
-    
-    func sessionDidDeactivate(_ session: WCSession) {
-        //nothing
-    }
-    
-    func session(_ session: WCSession, didReceiveMessage message: [String : Any], replyHandler: @escaping ([String : Any]) -> Void) {
-        var replyValues = Dictionary<String, AnyObject>()
-        
-        if(message["getWorkoutData"] != nil)
-        {
-            //this is where i am going to send the data
-            NSKeyedArchiver.setClassName("InfoObject", for: InfoClass.self)
-            
-            let workoutData = NSKeyedArchiver.archivedData(withRootObject: workoutInfo)
-            
-            replyValues["workoutData"] = workoutData as AnyObject?
-            replyHandler(replyValues)
-        }
-    }
-    
-    
-    
     //outlet for my water counter
     @IBOutlet weak var waterCount_lbl: UILabel!
     //used to capture info in the add workout
@@ -52,31 +23,12 @@ class SecondViewController: UIViewController, UITableViewDelegate, UITableViewDa
     
     //creating tableview so i can call to it
     @IBOutlet weak var tableView: UITableView!
-    
-    func sendWatchMessage(_ messageData: Data)
-    {
-        let currentTime = CFAbsoluteTimeGetCurrent()
-        
-        if lastMessageTime + 0.5 > currentTime
-        {
-            //this will make sure i dont send to early
-        }
-        
-        if(WCSession.default.isReachable)
-        {
-            //this will make sure im connected before i send
-            let message = ["workoutData" : messageData]
-            
-            WCSession.default.sendMessage(message, replyHandler: nil)
-        }
-        
-        lastMessageTime = CFAbsoluteTimeGetCurrent()
-    }
+
     
     override func viewDidLoad()
     {
         super.viewDidLoad()
-        
+        //scheduledTimerWithTimeInterval()
         
         if(WCSession.isSupported())
         {
@@ -100,6 +52,41 @@ class SecondViewController: UIViewController, UITableViewDelegate, UITableViewDa
         // Dispose of any resources that can be recreated.
     }
     
+    
+    //setting up Methods for WCSESSION
+    //-----------------------------------------------
+    //-----------------------------------------------
+    //-----------------------------------------------
+    
+    
+    func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
+        //nothing
+    }
+    
+    func sessionDidBecomeInactive(_ session: WCSession) {
+        //nothing
+    }
+    
+    func sessionDidDeactivate(_ session: WCSession) {
+        //nothing
+    }
+    
+    
+    func session(_ session: WCSession, didReceiveMessage message: [String : Any], replyHandler: @escaping ([String : Any]) -> Void) {
+        var replyValues = Dictionary<String, AnyObject>()
+        
+        if(message["getWorkoutData"] != nil)
+        {
+            //this is where i am going to send the data
+            NSKeyedArchiver.setClassName("InfoObject", for: InfoClass.self)
+            
+            let workoutData = NSKeyedArchiver.archivedData(withRootObject: workoutInfo)
+            
+            replyValues["workoutData"] = workoutData as AnyObject?
+            replyHandler(replyValues)
+        }
+    }
+    
     //setting up my buttons and actions
     //-----------------------------------------------
     //-----------------------------------------------
@@ -112,6 +99,7 @@ class SecondViewController: UIViewController, UITableViewDelegate, UITableViewDa
        // waterCount_lbl.text = String(waterInt)
         workoutInfo.setCount(newCount: waterInt)
         waterCount_lbl.text = String(workoutInfo.waterCount!)
+        sendWatchMessage()
     }
     
     @IBAction func addWorkout(_ sender: UIButton)
@@ -121,6 +109,7 @@ class SecondViewController: UIViewController, UITableViewDelegate, UITableViewDa
             let inputText = workoutInput_txt.text
             
             workoutInfo.addToArray(items: (inputText!, false))
+            sendWatchMessage()
             workoutInput_txt.text = ""
             tableView.reloadData()
         }
@@ -152,7 +141,7 @@ class SecondViewController: UIViewController, UITableViewDelegate, UITableViewDa
         }
         else
         {
-            cell.backgroundColor = UIColor.green
+            cell.backgroundColor = UIColor.purple
             cell.detailTextLabel?.text = "TODO"
         }
         
@@ -173,6 +162,7 @@ class SecondViewController: UIViewController, UITableViewDelegate, UITableViewDa
         }
         
         tableView.reloadData()
+        sendWatchMessage()
         
     }
     
@@ -180,10 +170,43 @@ class SecondViewController: UIViewController, UITableViewDelegate, UITableViewDa
     //-----------------------------------------------
     //-----------------------------------------------
     //-----------------------------------------------
-    func sendDataToWatch()
+    
+//    var timer = Timer()
+//    func scheduledTimerWithTimeInterval(){
+//        // Scheduling timer to Call the function "updateCounting" with the interval of 1 seconds
+//        timer = Timer.init(timeInterval: 1.0, target: self, selector: Selector(("sendDataToWatch")), userInfo: nil, repeats: true)
+//    }
+    
+    
+    func sendWatchMessage()
     {
-        let programData = NSKeyedArchiver.archivedData(withRootObject: workoutInfo)
-        sendWatchMessage(programData)
+        NSKeyedArchiver.setClassName("InfoObject", for: InfoClass.self)
+        let messageData = NSKeyedArchiver.archivedData(withRootObject: workoutInfo)
+        
+        let currentTime = CFAbsoluteTimeGetCurrent()
+        
+        if lastMessageTime + 0.5 > currentTime
+        {
+            //this will make sure i dont send to early
+        }
+        
+        if(WCSession.default.isReachable)
+        {
+            //this will make sure im connected before i send
+            let message = ["workoutData" : messageData]
+            
+            WCSession.default.sendMessage(message, replyHandler: nil)
+        }
+        
+        lastMessageTime = CFAbsoluteTimeGetCurrent()
     }
+    
+    
+    
+    @IBAction func saveIntake(_ sender: UIButton)
+    {
+        sendWatchMessage()
+    }
+    
 
 }
